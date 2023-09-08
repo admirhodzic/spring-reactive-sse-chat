@@ -26,7 +26,7 @@ fun main(args: Array<String>) {
 
 @Component
 class ClientPool(
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) {
     fun add(room: String, sink: FluxSink<ServerSentEvent<String>>) {
         if (clients[room] == null) clients[room] = mutableListOf()
@@ -36,24 +36,23 @@ class ClientPool(
     fun send(room: String, event: Any) {
         clients[room]?.forEach {
             it.next(
-                ServerSentEvent.builder(objectMapper.writeValueAsString(event)).build()
+                ServerSentEvent.builder(objectMapper.writeValueAsString(event)).build(),
             )
         }
     }
 
-    var clients: MutableMap<String, MutableList<FluxSink<ServerSentEvent<String>>>> = mutableMapOf()
+    private var clients: MutableMap<String, MutableList<FluxSink<ServerSentEvent<String>>>> = mutableMapOf()
 }
 
 @RestController
 class HomeController(
-    private val clientPool: ClientPool
+    private val clientPool: ClientPool,
 ) {
     @GetMapping(path = ["/stream/{room}"], produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     fun streamFlux(@PathVariable room: String): Flux<ServerSentEvent<String>> {
-        val flux = Flux.create {
+        return Flux.create {
             clientPool.add(room, it)
         }
-        return flux
     }
 
     @PostMapping("/{room}", consumes = [MediaType.APPLICATION_JSON_VALUE])
@@ -62,8 +61,8 @@ class HomeController(
             room,
             mapOf(
                 "m" to message["msg"]!!,
-                "f" to message["nick"]!!
-            )
+                "f" to message["nick"]!!,
+            ),
         )
         return HttpStatus.ACCEPTED
     }
